@@ -503,6 +503,20 @@ function ChapterRow({
       ]}
       onPress={() => router.push(`/chapter/${item.chapter_id}` as any)}
     >
+      {/* Leftmost: Chapter Cover/Thumbnail */}
+      {item.thumbnail_image_url ? (
+        <Image
+          source={{ uri: item.thumbnail_image_url }}
+          style={chapterStyles.thumbnail}
+          contentFit="cover"
+          transition={200}
+        />
+      ) : (
+        <View style={[chapterStyles.thumbnailPlaceholder, { backgroundColor: theme.border }]}>
+          <Ionicons name="book-outline" size={16} color={isRead ? '#3A3A3A' : '#6B6B6B'} />
+        </View>
+      )}
+
       {/* Left: chapter number */}
       <View style={chapterStyles.left}>
         <Text style={[chapterStyles.chapterNum, { color: numColor }]}>
@@ -718,6 +732,19 @@ const chapterStyles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '400',
     letterSpacing: 0.2,
+  },
+  thumbnail: {
+    width: 72,
+    height: 48,
+    borderRadius: 6,
+    backgroundColor: '#1C1C1E',
+  },
+  thumbnailPlaceholder: {
+    width: 72,
+    height: 48,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

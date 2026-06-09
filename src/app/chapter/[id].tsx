@@ -164,7 +164,10 @@ export default function ChapterReaderScreen() {
         viewabilityConfig={viewabilityConfig}
         ListHeaderComponent={
           <View style={styles.chapterHeader}>
-            <Text style={[styles.chapterNum, { color: theme.accent }]}>Chapter {chapter.chapter_number}</Text>
+            <Text style={[styles.chapterNum, { color: theme.accent }]}>
+              Chapter {chapter.chapter_number}
+              {chapter.title ? ` - ${chapter.title}` : ''}
+            </Text>
           </View>
         }
         ListFooterComponent={
@@ -218,7 +221,10 @@ export default function ChapterReaderScreen() {
             </Pressable>
             
             <View style={styles.hudInfo}>
-              <Text style={styles.hudChapterTitle} numberOfLines={1}>Chapter {chapter.chapter_number}</Text>
+              <Text style={styles.hudChapterTitle} numberOfLines={1}>
+                Chapter {chapter.chapter_number}
+                {chapter.title ? ` - ${chapter.title}` : ''}
+              </Text>
               <Text style={styles.hudPageCount}>{currentPage} / {chapter.pages.length} Halaman</Text>
             </View>
  

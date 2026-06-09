@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import { MangaCard } from '@/components/manga-card';
 import { MangaCardSkeleton } from '@/components/loading-skeleton';
@@ -18,12 +19,6 @@ import { Spacing } from '@/constants/theme';
 import type { MangaItem } from '@/types';
 
 const FORMATS = ['Semua', 'Manhwa', 'Manhua', 'Manga'];
-const COUNTRIES = [
-  { label: 'Semua', value: '' },
-  { label: '🇰🇷 Korea', value: 'KR' },
-  { label: '🇨🇳 China', value: 'CN' },
-  { label: '🇯🇵 Jepang', value: 'JP' },
-];
 
 export default function ExploreScreen() {
   const theme = useTheme();
@@ -34,8 +29,8 @@ export default function ExploreScreen() {
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFormat, setSelectedFormat] = useState('Semua');
-  const [selectedCountry, setSelectedCountry] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isFocused, setIsFocused] = useState(false);
 
   const loadData = useCallback(async (pageNum: number, reset: boolean = false) => {
     try {
@@ -76,14 +71,10 @@ export default function ExploreScreen() {
       !searchQuery ||
       m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.alternative_title.toLowerCase().includes(searchQuery.toLowerCase());
-
     const matchFormat =
       selectedFormat === 'Semua' ||
       m.taxonomy?.Format?.some((f) => f.name === selectedFormat);
-
-    const matchCountry = !selectedCountry || m.country_id === selectedCountry;
-
-    return matchSearch && matchFormat && matchCountry;
+    return matchSearch && matchFormat;
   });
 
   const renderItem = useCallback(
@@ -92,91 +83,75 @@ export default function ExploreScreen() {
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: '#0A0A0F' }]}>
-      <SafeAreaView style={{ flex: 1 }}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>🔍 Jelajah Komik</Text>
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+        {/* ── HEADER ── */}
+        <View style={[styles.header, { borderBottomColor: theme.border }]}>
+          <View>
+            <Text style={styles.headerEyebrow}>TEMUKAN</Text>
+            <Text style={[styles.headerTitle, { color: theme.text }]}>
+              JELAJAH<Text style={{ color: theme.accent }}>.</Text>
+            </Text>
+          </View>
         </View>
 
-        {/* Search */}
-        <View style={[styles.searchBar, { backgroundColor: '#1E1E2E', borderColor: '#2D2D3D' }]}>
-          <Text style={styles.searchIcon}>🔍</Text>
+        {/* ── SEARCH — flat underline style ── */}
+        <View style={[styles.searchWrapper, { borderBottomColor: isFocused ? theme.accent : theme.border }]}>
+          <Ionicons name="search-outline" size={16} color={isFocused ? theme.accent : '#4A4A4A'} />
           <TextInput
             id="explore-search"
-            style={[styles.searchInput, { color: '#fff' }]}
+            style={[styles.searchInput, { color: theme.text }]}
             placeholder="Cari judul komik..."
-            placeholderTextColor="#4B5563"
+            placeholderTextColor="#4A4A4A"
             value={searchQuery}
             onChangeText={setSearchQuery}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
           />
           {searchQuery.length > 0 && (
             <Pressable onPress={() => setSearchQuery('')}>
-              <Text style={styles.clearBtn}>✕</Text>
+              <Ionicons name="close" size={16} color="#4A4A4A" />
             </Pressable>
           )}
         </View>
 
-        {/* Format Filter */}
-        <View style={styles.filterRow}>
-          {FORMATS.map((f) => (
-            <Pressable
-              key={f}
-              style={[
-                styles.filterChip,
-                selectedFormat === f
-                  ? { backgroundColor: '#FF6B35' }
-                  : { backgroundColor: '#1E1E2E', borderColor: '#2D2D3D', borderWidth: 1 },
-              ]}
-              onPress={() => setSelectedFormat(f)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  { color: selectedFormat === f ? '#fff' : '#9CA3AF' },
-                ]}
-              >
-                {f}
-              </Text>
-            </Pressable>
-          ))}
+        {/* ── FILTER ROWS ── */}
+        <View style={[styles.filterSection, { borderBottomColor: theme.border }]}>
+          {/* Format filter */}
+          <View style={styles.filterRow}>
+            <Text style={styles.filterLabel}>JENIS</Text>
+            <View style={styles.filterOptions}>
+              {FORMATS.map((f) => {
+                const isActive = selectedFormat === f;
+                return (
+                  <Pressable key={f} onPress={() => setSelectedFormat(f)}>
+                    <Text
+                      style={[
+                        styles.filterOption,
+                        { color: isActive ? theme.accent : '#4A4A4A',
+                          fontWeight: isActive ? '700' : '400' },
+                      ]}
+                    >
+                      {f.toUpperCase()}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
         </View>
 
-        {/* Country Filter */}
-        <View style={[styles.filterRow, { marginTop: 0 }]}>
-          {COUNTRIES.map((c) => (
-            <Pressable
-              key={c.value}
-              style={[
-                styles.filterChip,
-                selectedCountry === c.value
-                  ? { backgroundColor: '#6C63FF' }
-                  : { backgroundColor: '#1E1E2E', borderColor: '#2D2D3D', borderWidth: 1 },
-              ]}
-              onPress={() => setSelectedCountry(c.value)}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  { color: selectedCountry === c.value ? '#fff' : '#9CA3AF' },
-                ]}
-              >
-                {c.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* Results count */}
-        <View style={styles.resultMeta}>
+        {/* ── RESULT COUNT ── */}
+        <View style={styles.resultRow}>
           <Text style={styles.resultText}>
-            {loading ? 'Memuat...' : `${filtered.length} komik ditemukan`}
+            {loading ? '—' : `${filtered.length} JUDUL`}
           </Text>
         </View>
 
         {error && (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>⚠️ {error}</Text>
+            <Ionicons name="alert-circle-outline" size={14} color="#FF3B3B" />
+            <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
 
@@ -191,23 +166,24 @@ export default function ExploreScreen() {
             keyExtractor={(item) => item.manga_id}
             numColumns={2}
             columnWrapperStyle={styles.columnWrapper}
-            contentContainerStyle={{ paddingBottom: 20, paddingHorizontal: Spacing.four }}
+            contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             onEndReached={onLoadMore}
             onEndReachedThreshold={0.3}
             ListEmptyComponent={
               <View style={styles.emptyState}>
-                <Text style={styles.emptyEmoji}>🔭</Text>
-                <Text style={styles.emptyText}>Komik tidak ditemukan</Text>
-                <Text style={styles.emptySubText}>Coba kata kunci lain</Text>
+                <Text style={styles.emptyTitle}>TIDAK DITEMUKAN</Text>
+                <Text style={styles.emptySubText}>
+                  Coba kata kunci atau filter yang berbeda
+                </Text>
               </View>
             }
             ListFooterComponent={
               loadingMore ? (
                 <View style={styles.loadingMore}>
-                  <ActivityIndicator color="#FF6B35" />
+                  <ActivityIndicator color={theme.accent} size="small" />
                 </View>
-              ) : null
+              ) : <View style={{ height: 80 }} />
             }
           />
         )}
@@ -222,101 +198,121 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
     paddingTop: Spacing.three,
+    paddingBottom: Spacing.two,
+    borderBottomWidth: 1,
+  },
+  headerEyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#4A4A4A',
+    letterSpacing: 2,
+    marginBottom: 2,
   },
   headerTitle: {
-    color: '#fff',
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: '800',
+    letterSpacing: -1,
   },
-  searchBar: {
+  searchWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: Spacing.four,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: 10,
-    gap: 8,
-    marginBottom: Spacing.two,
-  },
-  searchIcon: {
-    fontSize: 16,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: 12,
+    borderBottomWidth: 1.5,
+    gap: 10,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
+    fontWeight: '500',
     padding: 0,
   },
-  clearBtn: {
-    color: '#6B7280',
-    fontSize: 16,
-    padding: 2,
+  filterSection: {
+    borderBottomWidth: 1,
+    paddingVertical: 10,
+    gap: 8,
   },
   filterRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: Spacing.four,
-    gap: Spacing.one,
-    marginBottom: Spacing.two,
+    gap: 14,
+  },
+  filterLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#4A4A4A',
+    letterSpacing: 1.5,
+    width: 44,
+  },
+  filterOptions: {
+    flexDirection: 'row',
+    gap: 14,
     flexWrap: 'wrap',
   },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+  filterOption: {
+    fontSize: 11,
+    letterSpacing: 0.5,
   },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  resultMeta: {
+  resultRow: {
     paddingHorizontal: Spacing.four,
-    marginBottom: Spacing.two,
+    paddingVertical: 8,
   },
   resultText: {
-    color: '#6B7280',
-    fontSize: 12,
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#4A4A4A',
+    letterSpacing: 1.5,
   },
   errorBox: {
     marginHorizontal: Spacing.four,
-    backgroundColor: '#FF000020',
-    borderColor: '#FF6B6B',
-    borderWidth: 1,
-    borderRadius: 10,
+    backgroundColor: 'rgba(255, 59, 59, 0.08)',
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF3B3B',
     padding: Spacing.two,
     marginBottom: Spacing.two,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   errorText: {
-    color: '#FF6B6B',
-    fontSize: 13,
+    color: '#FF3B3B',
+    fontSize: 12,
+    fontWeight: '600',
   },
   skeletonGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: Spacing.four,
     justifyContent: 'space-between',
+    paddingTop: Spacing.two,
+  },
+  listContent: {
+    paddingTop: Spacing.two,
+    paddingBottom: 20,
   },
   columnWrapper: {
+    paddingHorizontal: Spacing.four,
     justifyContent: 'space-between',
-    marginBottom: 0,
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 60,
-    gap: Spacing.two,
+    gap: 10,
+    paddingHorizontal: Spacing.five,
   },
-  emptyEmoji: {
-    fontSize: 48,
-  },
-  emptyText: {
-    color: '#fff',
+  emptyTitle: {
+    color: '#F0F0F0',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '800',
+    letterSpacing: 1,
   },
   emptySubText: {
-    color: '#6B7280',
-    fontSize: 13,
+    color: '#4A4A4A',
+    fontSize: 12,
+    textAlign: 'center',
+    letterSpacing: 0.3,
   },
   loadingMore: {
     padding: Spacing.four,

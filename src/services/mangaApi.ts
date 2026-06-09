@@ -5,6 +5,8 @@
 
 import type {
   ChapterDetailResponse,
+  ChapterListResponse,
+  CommentResponse,
   MangaDetailResponse,
   MangaListResponse,
 } from '@/types';
@@ -16,7 +18,7 @@ export async function fetchMangaList(
   page: number = 1,
   pageSize: number = 24
 ): Promise<MangaListResponse> {
-  const url = `${BASE_URL}/manga/list?page=${page}&page_size=${pageSize}`;
+  const url = `${BASE_URL}/manga/list?page=${page}&page_size=${pageSize}&sort=latest&sort_order=desc`;
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to fetch manga list: ${response.status}`);
@@ -64,6 +66,38 @@ export async function fetchChapterDetail(chapterId: string): Promise<ChapterDeta
   }
 
   return json;
+}
+
+// ===== MANGA CHAPTERS =====
+export async function fetchMangaChapters(
+  mangaId: string,
+  page: number = 1,
+  pageSize: number = 24,
+  sortOrder: 'asc' | 'desc' = 'desc'
+): Promise<ChapterListResponse> {
+  const url = `${BASE_URL}/chapter/${mangaId}/list?page=${page}&page_size=${pageSize}&sort_by=chapter_number&sort_order=${sortOrder}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch chapter list: ${response.status}`);
+  }
+  const data: ChapterListResponse = await response.json();
+  return data;
+}
+
+// ===== COMMENTS =====
+export async function fetchMangaComments(
+  mangaId: string,
+  page: number = 1,
+  pageSize: number = 10
+): Promise<CommentResponse> {
+  const pathParam = encodeURIComponent(`series/${mangaId}`);
+  const url = `https://commento.shngm.io/api/comment?path=${pathParam}&pageSize=${pageSize}&page=${page}&lang=en&sortBy=like_desc`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch comments: ${response.status}`);
+  }
+  const data: CommentResponse = await response.json();
+  return data;
 }
 
 // ===== HELPERS =====

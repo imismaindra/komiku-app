@@ -12,23 +12,20 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/context/auth-context';
-import { useTheme } from '@/hooks/use-theme';
 import { Spacing } from '@/constants/theme';
 
 export default function LoginScreen() {
   const { login, state, clearError } = useAuth();
-  const theme = useTheme();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      return;
-    }
+    if (!email.trim() || !password.trim()) return;
     const success = await login({ email: email.trim(), password });
     if (success) {
       router.replace('/(tabs)' as any);
@@ -36,11 +33,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={[styles.root, { backgroundColor: '#0A0A0F' }]}>
-      {/* Background decoration */}
-      <View style={styles.bgCircle1} />
-      <View style={styles.bgCircle2} />
-
+    <View style={styles.root}>
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -49,33 +42,45 @@ export default function LoginScreen() {
           <ScrollView
             contentContainerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            {/* Logo */}
-            <View style={styles.logoContainer}>
-              <View style={styles.logoBox}>
-                <Text style={styles.logoEmoji}>📖</Text>
+            {/* ── BRANDING BLOCK ── */}
+            <View style={styles.brand}>
+              <View style={styles.logoSquare}>
+                <Text style={styles.logoChar}>K</Text>
               </View>
-              <Text style={styles.logoText}>Komiku</Text>
-              <Text style={styles.tagline}>Baca komik favoritmu kapan saja</Text>
+              <View style={styles.brandText}>
+                <Text style={styles.appName}>KOMIKU</Text>
+                <Text style={styles.appTagline}>Baca komik favoritmu kapan saja</Text>
+              </View>
             </View>
 
-            {/* Form */}
-            <View style={[styles.card, { backgroundColor: '#13131A' }]}>
-              <Text style={styles.cardTitle}>Masuk</Text>
+            {/* ── DIVIDER LINE ── */}
+            <View style={styles.dividerFull} />
 
-              {state.error && (
-                <View style={styles.errorBox}>
-                  <Text style={styles.errorText}>⚠️ {state.error}</Text>
-                </View>
-              )}
+            {/* ── FORM HEADER ── */}
+            <View style={styles.formHeader}>
+              <Text style={styles.formEyebrow}>AUTENTIKASI</Text>
+              <Text style={styles.formTitle}>Masuk</Text>
+            </View>
 
+            {/* ── ERROR ── */}
+            {state.error && (
+              <View style={styles.errorBox}>
+                <Ionicons name="alert-circle-outline" size={14} color="#FF3B3B" />
+                <Text style={styles.errorText}>{state.error}</Text>
+              </View>
+            )}
+
+            {/* ── FIELDS ── */}
+            <View style={styles.fields}>
               <View style={styles.field}>
-                <Text style={[styles.label, { color: '#9CA3AF' }]}>Email</Text>
+                <Text style={styles.fieldLabel}>EMAIL</Text>
                 <TextInput
                   id="login-email"
-                  style={[styles.input, { backgroundColor: '#1E1E2E', color: '#fff', borderColor: '#2D2D3D' }]}
+                  style={styles.input}
                   placeholder="nama@email.com"
-                  placeholderTextColor="#4B5563"
+                  placeholderTextColor="#3A3A3A"
                   value={email}
                   onChangeText={(t) => { setEmail(t); clearError(); }}
                   keyboardType="email-address"
@@ -85,60 +90,61 @@ export default function LoginScreen() {
               </View>
 
               <View style={styles.field}>
-                <Text style={[styles.label, { color: '#9CA3AF' }]}>Password</Text>
-                <View>
+                <Text style={styles.fieldLabel}>PASSWORD</Text>
+                <View style={styles.passwordRow}>
                   <TextInput
                     id="login-password"
-                    style={[styles.input, { backgroundColor: '#1E1E2E', color: '#fff', borderColor: '#2D2D3D', paddingRight: 50 }]}
+                    style={[styles.input, { flex: 1 }]}
                     placeholder="Masukkan password"
-                    placeholderTextColor="#4B5563"
+                    placeholderTextColor="#3A3A3A"
                     value={password}
                     onChangeText={(t) => { setPassword(t); clearError(); }}
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                   />
-                  <Pressable
-                    style={styles.eyeBtn}
-                    onPress={() => setShowPassword(!showPassword)}
-                  >
-                    <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
+                  <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={18}
+                      color="#4A4A4A"
+                    />
                   </Pressable>
                 </View>
               </View>
+            </View>
 
-              <Pressable
-                id="login-submit"
-                style={({ pressed }) => [
-                  styles.loginBtn,
-                  { opacity: pressed || state.isLoading ? 0.8 : 1 },
-                ]}
-                onPress={handleLogin}
-                disabled={state.isLoading}
-              >
-                {state.isLoading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.loginBtnText}>Masuk</Text>
-                )}
-              </Pressable>
+            {/* ── SUBMIT ── */}
+            <Pressable
+              id="login-submit"
+              style={({ pressed }) => [
+                styles.submitBtn,
+                { opacity: pressed || state.isLoading ? 0.8 : 1 },
+              ]}
+              onPress={handleLogin}
+              disabled={state.isLoading}
+            >
+              {state.isLoading ? (
+                <ActivityIndicator color="#0D0D0D" />
+              ) : (
+                <Text style={styles.submitText}>MASUK</Text>
+              )}
+            </Pressable>
 
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>atau</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
+            {/* ── REGISTER LINK ── */}
+            <View style={styles.switchRow}>
+              <View style={styles.switchLine} />
               <Pressable
                 id="goto-register"
-                style={({ pressed }) => [
-                  styles.registerBtn,
-                  { borderColor: '#FF6B35', opacity: pressed ? 0.7 : 1 },
-                ]}
                 onPress={() => router.push('/(auth)/register' as any)}
               >
-                <Text style={styles.registerBtnText}>Daftar Akun Baru</Text>
+                <Text style={styles.switchText}>
+                  Belum punya akun?{' '}
+                  <Text style={styles.switchLink}>Daftar</Text>
+                </Text>
               </Pressable>
+              <View style={styles.switchLine} />
             </View>
+
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -149,149 +155,145 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-  },
-  bgCircle1: {
-    position: 'absolute',
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: '#FF6B3520',
-    top: -100,
-    right: -80,
-  },
-  bgCircle2: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: '#6C63FF20',
-    bottom: 100,
-    left: -60,
+    backgroundColor: '#0D0D0D',
   },
   scroll: {
     flexGrow: 1,
-    justifyContent: 'center',
     padding: Spacing.four,
-    gap: Spacing.four,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    gap: Spacing.one,
-  },
-  logoBox: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: '#FF6B35',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  logoEmoji: {
-    fontSize: 36,
-  },
-  logoText: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#fff',
-    marginTop: Spacing.two,
-  },
-  tagline: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  card: {
-    borderRadius: 20,
-    padding: Spacing.four,
+    paddingTop: Spacing.five,
     gap: Spacing.three,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 10,
   },
-  cardTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: Spacing.one,
-  },
-  errorBox: {
-    backgroundColor: '#FF000020',
-    borderColor: '#FF6B6B',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: Spacing.two,
-  },
-  errorText: {
-    color: '#FF6B6B',
-    fontSize: 13,
-  },
-  field: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: Spacing.three,
-    fontSize: 15,
-  },
-  eyeBtn: {
-    position: 'absolute',
-    right: 12,
-    top: 12,
-  },
-  eyeText: {
-    fontSize: 18,
-  },
-  loginBtn: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 12,
-    padding: Spacing.three,
-    alignItems: 'center',
-    shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  loginBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  divider: {
+  brand: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.two,
+    gap: 14,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#2D2D3D',
-  },
-  dividerText: {
-    color: '#4B5563',
-    fontSize: 13,
-  },
-  registerBtn: {
-    borderWidth: 1.5,
-    borderRadius: 12,
-    padding: Spacing.three,
+  logoSquare: {
+    width: 56,
+    height: 56,
+    backgroundColor: '#E8FF00',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  registerBtnText: {
-    color: '#FF6B35',
-    fontSize: 15,
+  logoChar: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#0D0D0D',
+    letterSpacing: -2,
+  },
+  brandText: {
+    gap: 2,
+  },
+  appName: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#F0F0F0',
+    letterSpacing: 3,
+  },
+  appTagline: {
+    fontSize: 11,
+    color: '#4A4A4A',
+    fontWeight: '400',
+    letterSpacing: 0.3,
+  },
+  dividerFull: {
+    height: 1,
+    backgroundColor: '#1E1E1E',
+    marginVertical: 4,
+  },
+  formHeader: {
+    gap: 4,
+    marginTop: Spacing.two,
+  },
+  formEyebrow: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#4A4A4A',
+    letterSpacing: 2.5,
+  },
+  formTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#F0F0F0',
+    letterSpacing: -1,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255,59,59,0.08)',
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF3B3B',
+    padding: 12,
+  },
+  errorText: {
+    color: '#FF3B3B',
+    fontSize: 12,
     fontWeight: '600',
+  },
+  fields: {
+    gap: Spacing.three,
+  },
+  field: {
+    gap: 8,
+  },
+  fieldLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#4A4A4A',
+    letterSpacing: 2,
+  },
+  input: {
+    backgroundColor: '#141414',
+    color: '#F0F0F0',
+    fontSize: 15,
+    fontWeight: '500',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#141414',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  eyeBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  submitBtn: {
+    backgroundColor: '#E8FF00',
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  submitText: {
+    color: '#0D0D0D',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 2.5,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginTop: 4,
+  },
+  switchLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#1E1E1E',
+  },
+  switchText: {
+    color: '#4A4A4A',
+    fontSize: 12,
+    fontWeight: '400',
+  },
+  switchLink: {
+    color: '#E8FF00',
+    fontWeight: '700',
   },
 });

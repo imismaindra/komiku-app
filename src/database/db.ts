@@ -189,3 +189,104 @@ export async function isBookmarked(userId: number, mangaId: string): Promise<boo
   );
   return (result?.count ?? 0) > 0;
 }
+
+// ====== Read History Operations ======
+
+export interface DbReadHistory {
+  id: number;
+  user_id: number;
+  manga_id: string;
+  chapter_id: string;
+  chapter_number: number;
+  read_at: string;
+}
+
+export async function addReadHistory(
+  userId: number,
+  mangaId: string,
+  chapterId: string,
+  chapterNumber: number
+): Promise<boolean> {
+  const database = await getDatabase();
+  try {
+    // Upsert: update read_at if already exists, else insert
+    const existing = await database.getFirstAsync<{ id: number }>(
+      'SELECT id FROM read_history WHERE user_id = ? AND manga_id = ? AND chapter_id = ?',
+      [userId, mangaId, chapterId]
+    );
+    if (existing) {
+      await database.runAsync(
+        'UPDATE read_history SET read_at = datetime(\'now\'), chapter_number = ? WHERE id = ?',
+        [chapterNumber, existing.id]
+      );
+    } else {
+      await database.runAsync(
+        'INSERT INTO read_history (user_id, manga_id, chapter_id, chapter_number) VALUES (?, ?, ?, ?)',
+        [userId, mangaId, chapterId, chapterNumber]
+      );
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function getReadHistoryCount(userId: number): Promise<number> {
+  const database = await getDatabase();
+  try {
+    const result = await database.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(DISTINCT manga_id) as count FROM read_history WHERE user_id = ?',
+      [userId]
+    );
+    return result?.count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function getReadHistory(userId: number): Promise<DbReadHistory[]> {
+  const database = await getDatabase();
+  try {
+    const history = await database.getAllAsync<DbReadHistory>(
+      'SELECT * FROM read_history WHERE user_id = ? ORDER BY read_at DESC',
+      [userId]
+    );
+    return history;
+  } catch {
+    return [];
+  }
+}
+
+export async function getReadHistoryForManga(
+  userId: number,
+  mangaId: string
+): Promise<DbReadHistory | null> {
+  const database = await getDatabase();
+  try {
+    // Return the most recently read chapter for this manga
+    const record = await database.getFirstAsync<DbReadHistory>(
+      'SELECT * FROM read_history WHERE user_id = ? AND manga_id = ? ORDER BY read_at DESC LIMIT 1',
+      [userId, mangaId]
+    );
+    return record ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getReadChapterIds(
+  userId: number,
+  mangaId: string
+): Promise<Set<string>> {
+  const database = await getDatabase();
+  try {
+    const rows = await database.getAllAsync<{ chapter_id: string }>(
+      'SELECT chapter_id FROM read_history WHERE user_id = ? AND manga_id = ?',
+      [userId, mangaId]
+    );
+    return new Set(rows.map((r) => r.chapter_id));
+  } catch {
+    return new Set();
+  }
+}
+

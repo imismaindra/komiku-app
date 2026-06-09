@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import { MangaCard } from '@/components/manga-card';
 import { MangaFeaturedCard } from '@/components/manga-featured-card';
@@ -91,22 +92,11 @@ export default function HomeScreen() {
     []
   );
 
-  return (
-    <View style={[styles.root, { backgroundColor: '#0A0A0F' }]}>
-      <SafeAreaView style={{ flex: 1 }}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.headerGreeting}>
-              Halo, {authState.user?.username ?? 'Pembaca'} 👋
-            </Text>
-            <Text style={styles.headerTitle}>Komiku</Text>
-          </View>
-          <View style={styles.headerBadge}>
-            <Text style={styles.headerBadgeText}>📖</Text>
-          </View>
-        </View>
+  const username = authState.user?.username ?? 'Pembaca';
 
+  return (
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
         <FlatList
           data={filteredManga}
           renderItem={renderMangaItem}
@@ -119,18 +109,32 @@ export default function HomeScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#FF6B35"
-              colors={['#FF6B35']}
+              tintColor={theme.accent}
+              colors={[theme.accent]}
             />
           }
           onEndReached={onLoadMore}
           onEndReachedThreshold={0.3}
           ListHeaderComponent={
-            <View style={styles.listHeader}>
-              {/* Featured Section */}
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>🔥 Featured</Text>
+            <View>
+              {/* ── HEADER ── */}
+              <View style={styles.header}>
+                <View>
+                  <Text style={styles.headerEyebrow}>SELAMAT DATANG,</Text>
+                  <Text style={[styles.headerTitle, { color: theme.text }]}>
+                    {username.toUpperCase()}
+                    <Text style={[styles.headerDot, { color: theme.accent }]}>.</Text>
+                  </Text>
+                </View>
+                <View style={[styles.headerRule, { backgroundColor: theme.border }]} />
               </View>
+
+              {/* ── FEATURED SECTION ── */}
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionEyebrow}>01</Text>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>Rekomendasi</Text>
+              </View>
+
               {loading ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.featuredScroll}>
                   {[1, 2].map((i) => <MangaFeaturedSkeleton key={i} />)}
@@ -140,7 +144,7 @@ export default function HomeScreen() {
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   style={styles.featuredScroll}
-                  contentContainerStyle={{ paddingHorizontal: Spacing.four }}
+                  contentContainerStyle={styles.featuredContent}
                 >
                   {featured.map((item) => (
                     <MangaFeaturedCard key={item.manga_id} item={item} />
@@ -148,47 +152,50 @@ export default function HomeScreen() {
                 </ScrollView>
               )}
 
-              {/* Genre Chips */}
+              {/* ── GENRE FILTER — text-only style ── */}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 style={styles.genreScroll}
                 contentContainerStyle={styles.genreContent}
               >
-                {GENRES.map((genre) => (
-                  <View
-                    key={genre}
-                    style={[
-                      styles.genreChip,
-                      selectedGenre === genre
-                        ? { backgroundColor: '#FF6B35' }
-                        : { backgroundColor: '#1E1E2E', borderColor: '#2D2D3D', borderWidth: 1 },
-                    ]}
-                    // @ts-ignore
-                    onStartShouldSetResponder={() => true}
-                    onResponderGrant={() => setSelectedGenre(genre)}
-                  >
-                    <Text
-                      style={[
-                        styles.genreChipText,
-                        { color: selectedGenre === genre ? '#fff' : '#9CA3AF' },
-                      ]}
+                {GENRES.map((genre) => {
+                  const isActive = selectedGenre === genre;
+                  return (
+                    <Pressable
+                      key={genre}
+                      onPress={() => setSelectedGenre(genre)}
+                      style={styles.genreItem}
                     >
-                      {genre}
-                    </Text>
-                  </View>
-                ))}
+                      <Text
+                        style={[
+                          styles.genreLabel,
+                          { color: isActive ? theme.accent : '#4A4A4A' },
+                        ]}
+                      >
+                        {genre.toUpperCase()}
+                      </Text>
+                      {isActive && (
+                        <View style={[styles.genreUnderline, { backgroundColor: theme.accent }]} />
+                      )}
+                    </Pressable>
+                  );
+                })}
               </ScrollView>
 
-              {/* Popular Section Header */}
+              {/* ── COLLECTION HEADER ── */}
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>📚 {selectedGenre === 'Semua' ? 'Semua Komik' : selectedGenre}</Text>
-                <Text style={styles.sectionCount}>{filteredManga.length} komik</Text>
+                <Text style={styles.sectionEyebrow}>02</Text>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  {selectedGenre === 'Semua' ? 'Koleksi' : selectedGenre}
+                </Text>
+                <Text style={styles.sectionCount}>{filteredManga.length}</Text>
               </View>
 
               {error && (
                 <View style={styles.errorBox}>
-                  <Text style={styles.errorText}>⚠️ {error}</Text>
+                  <Ionicons name="alert-circle-outline" size={14} color="#FF3B3B" />
+                  <Text style={styles.errorText}>{error}</Text>
                 </View>
               )}
 
@@ -202,10 +209,9 @@ export default function HomeScreen() {
           ListFooterComponent={
             loadingMore ? (
               <View style={styles.loadingMore}>
-                <ActivityIndicator color="#FF6B35" />
-                <Text style={styles.loadingMoreText}>Memuat lebih banyak...</Text>
+                <ActivityIndicator color={theme.accent} size="small" />
               </View>
-            ) : null
+            ) : <View style={{ height: 80 }} />
           }
         />
       </SafeAreaView>
@@ -218,74 +224,90 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
     paddingTop: Spacing.three,
+    paddingBottom: Spacing.two,
   },
-  headerGreeting: {
-    color: '#9CA3AF',
-    fontSize: 13,
+  headerEyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#4A4A4A',
+    letterSpacing: 2,
+    marginBottom: 2,
   },
   headerTitle: {
-    color: '#fff',
-    fontSize: 24,
+    fontSize: 30,
     fontWeight: '800',
+    letterSpacing: -1,
+    lineHeight: 34,
   },
-  headerBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FF6B3520',
-    justifyContent: 'center',
-    alignItems: 'center',
+  headerDot: {
+    fontSize: 34,
+    fontWeight: '900',
   },
-  headerBadgeText: {
-    fontSize: 22,
-  },
-  listContent: {
-    paddingBottom: 20,
-  },
-  listHeader: {
-    marginBottom: Spacing.two,
+  headerRule: {
+    height: 1,
+    marginTop: Spacing.three,
   },
   sectionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'baseline',
     paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-    marginTop: Spacing.two,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.two,
+    gap: 10,
+  },
+  sectionEyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4A4A4A',
+    letterSpacing: 1,
   },
   sectionTitle: {
-    color: '#fff',
-    fontSize: 17,
+    fontSize: 20,
     fontWeight: '700',
+    letterSpacing: -0.5,
+    flex: 1,
   },
   sectionCount: {
-    color: '#6B7280',
-    fontSize: 12,
+    fontSize: 11,
+    color: '#4A4A4A',
+    fontWeight: '600',
   },
   featuredScroll: {
     paddingBottom: Spacing.two,
   },
+  featuredContent: {
+    paddingHorizontal: Spacing.four,
+  },
   genreScroll: {
-    marginVertical: Spacing.two,
+    marginTop: Spacing.one,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E1E1E',
   },
   genreContent: {
     paddingHorizontal: Spacing.four,
-    gap: Spacing.two,
+    gap: 24,
   },
-  genreChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+  genreItem: {
+    paddingBottom: 10,
+    paddingTop: 4,
+    position: 'relative',
   },
-  genreChipText: {
-    fontSize: 13,
-    fontWeight: '600',
+  genreLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  genreUnderline: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+  },
+  listContent: {
+    paddingBottom: 20,
   },
   columnWrapper: {
     paddingHorizontal: Spacing.four,
@@ -299,24 +321,22 @@ const styles = StyleSheet.create({
   },
   errorBox: {
     marginHorizontal: Spacing.four,
-    backgroundColor: '#FF000020',
-    borderColor: '#FF6B6B',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: Spacing.three,
+    backgroundColor: 'rgba(255, 59, 59, 0.08)',
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF3B3B',
+    padding: Spacing.two,
     marginBottom: Spacing.two,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   errorText: {
-    color: '#FF6B6B',
-    fontSize: 13,
+    color: '#FF3B3B',
+    fontSize: 12,
+    fontWeight: '600',
   },
   loadingMore: {
     padding: Spacing.four,
     alignItems: 'center',
-    gap: Spacing.two,
-  },
-  loadingMoreText: {
-    color: '#6B7280',
-    fontSize: 13,
   },
 });

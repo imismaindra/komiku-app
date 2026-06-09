@@ -1,0 +1,16 @@
+# AI Rules & Project Map Instructions
+
+You are working on the **komiku-app** project (Expo SDK 56 + React Native).
+
+## 🚀 Optimization: DO NOT Scan Directories Recursively
+- A complete map of the directory structure and architecture is documented in [CLAUDE.md](file:///d:/Pribadi/Kuliah/Semester_6/Xplatpfrom/komiku-app/CLAUDE.md).
+- **CRITICAL**: Do not run global directory listings or deep recursive scans. Always consult `CLAUDE.md` to find the exact file you need.
+- If you create, rename, or delete files, remember to update the folder map in `CLAUDE.md`.
+
+## 🛠️ Stack & Rules
+- **Framework**: Expo SDK v56.0.0, React Native, Expo Router.
+- **Routing**: File-based routing under `src/app`.
+  - Group `(auth)` contains login & register.
+  - Group `(tabs)` contains main screens (home, explore, profile).
+- **Paths**: Use `@/` path alias for all imports inside `src/`.
+- **Database**: Uses SQLite via `expo-sqlite` on native (`src/database/db.ts`) and AsyncStorage on web (`src/database/db.web.ts`).

@@ -107,3 +107,61 @@ export interface ChapterDetailResponse {
   message: string;
   data: ChapterDetail;
 }
+
+// ==================== CHAPTER LIST TYPES ====================
+export interface ChapterListItem {
+  chapter_id: string;
+  manga_id: string;
+  chapter_title: string;
+  chapter_number: number;
+  thumbnail_image_url: string;
+  view_count: number;
+  release_date: string;
+}
+
+export interface ChapterListResponse {
+  retcode: number;
+  message: string;
+  meta: ApiMeta;
+  data: ChapterListItem[];
+}
+
+// ==================== COMMENT TYPES ====================
+export interface CommentUser {
+  nick: string;
+  link?: string;
+  avatar?: string;
+}
+
+export interface CommentItem {
+  status: string;
+  comment: string;
+  link?: string;
+  nick: string;
+  pid?: number;
+  rid?: number;
+  user_id: number;
+  sticky?: any;
+  like: number;
+  objectId: number;
+  level: number;
+  type: string;
+  avatar?: string;
+  orig: string;
+  time: number;
+  reply_user?: CommentUser;
+}
+
+export interface CommentsData {
+  page: number;
+  totalPages: number;
+  pageSize: number;
+  count: number;
+  data: CommentItem[];
+}
+
+export interface CommentResponse {
+  errno: number;
+  errmsg: string;
+  data: CommentsData;
+}

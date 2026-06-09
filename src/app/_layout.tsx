@@ -1,7 +1,13 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import { Stack } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+LogBox.ignoreLogs([
+  '"shadow*" style props are deprecated',
+  '"textShadow*" style props are deprecated',
+  'Animated: `useNativeDriver` is not supported',
+]);
 
 import { AuthProvider } from '@/context/auth-context';
  
@@ -16,18 +22,13 @@ function RootStack() {
         <Stack.Screen
           name="manga/[id]"
           options={{
-            headerShown: true,
-            headerTitle: '',
-            headerTransparent: true,
-            headerBackTitle: 'Kembali',
+            headerShown: false,
           }}
         />
         <Stack.Screen
           name="chapter/[id]"
           options={{
-            headerShown: true,
-            headerTitle: 'Baca Chapter',
-            headerBackTitle: 'Detail',
+            headerShown: false,
           }}
         />
       </Stack>

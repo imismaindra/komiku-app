@@ -73,11 +73,6 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Restore session on app start
-  useEffect(() => {
-    restoreSession();
-  }, []);
-
   const restoreSession = async () => {
     try {
       const token = await AsyncStorage.getItem('auth_token');
@@ -114,6 +109,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
   };
+
+  // Restore session on app start
+  useEffect(() => {
+    restoreSession();
+  }, []);
 
   const login = useCallback(async (data: LoginRequest): Promise<boolean> => {
     dispatch({ type: 'SET_LOADING', payload: true });

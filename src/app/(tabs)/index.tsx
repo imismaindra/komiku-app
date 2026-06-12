@@ -11,11 +11,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { MangaCard } from '@/components/manga-card';
 import { MangaFeaturedCard } from '@/components/manga-featured-card';
 import { MangaCardSkeleton, MangaFeaturedSkeleton } from '@/components/loading-skeleton';
 import { useAuth } from '@/context/auth-context';
+import { useNotifications } from '@/context/notification-context';
 import { useTheme } from '@/hooks/use-theme';
 import { fetchMangaList } from '@/services/mangaApi';
 import { Spacing } from '@/constants/theme';
@@ -25,6 +27,7 @@ const GENRES = ['Semua', 'Action', 'Fantasy', 'Adventure', 'Romance', 'Comedy', 
 
 export default function HomeScreen() {
   const { state: authState } = useAuth();
+  const { unreadCount } = useNotifications();
   const theme = useTheme();
 
   const [mangaList, setMangaList] = useState<MangaItem[]>([]);
@@ -119,12 +122,27 @@ export default function HomeScreen() {
             <View>
               {/* ── HEADER ── */}
               <View style={styles.header}>
-                <View>
-                  <Text style={styles.headerEyebrow}>SELAMAT DATANG,</Text>
-                  <Text style={[styles.headerTitle, { color: theme.text }]}>
-                    {username.toUpperCase()}
-                    <Text style={[styles.headerDot, { color: theme.accent }]}>.</Text>
-                  </Text>
+                <View style={styles.headerRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.headerEyebrow}>SELAMAT DATANG,</Text>
+                    <Text style={[styles.headerTitle, { color: theme.text }]}>
+                      {username.toUpperCase()}
+                      <Text style={[styles.headerDot, { color: theme.accent }]}>.</Text>
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => router.push('/notifications')}
+                    style={styles.bellButton}
+                  >
+                    <Ionicons name="notifications-outline" size={24} color={theme.text} />
+                    {unreadCount > 0 && (
+                      <View style={[styles.bellBadge, { backgroundColor: theme.accent }]}>
+                        <Text style={[styles.bellBadgeText, { color: theme.background }]}>
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </Text>
+                      </View>
+                    )}
+                  </Pressable>
                 </View>
                 <View style={[styles.headerRule, { backgroundColor: theme.border }]} />
               </View>
@@ -227,6 +245,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.three,
     paddingBottom: Spacing.two,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bellButton: {
+    position: 'relative',
+    padding: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    backgroundColor: '#141414',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  bellBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
   },
   headerEyebrow: {
     fontSize: 10,

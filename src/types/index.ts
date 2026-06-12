@@ -165,3 +165,16 @@ export interface CommentResponse {
   errmsg: string;
   data: CommentsData;
 }
+
+// ==================== NOTIFICATION TYPES ====================
+export interface AppNotification {
+  id: number;
+  user_id: number;
+  title: string;
+  body: string;
+  manga_id?: string;
+  chapter_id?: string;
+  created_at: string;
+  is_read: number; // 0 = unread, 1 = read
+}
+

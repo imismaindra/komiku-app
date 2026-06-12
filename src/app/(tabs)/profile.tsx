@@ -187,6 +187,28 @@ export default function ProfileScreen() {
             ))}
           </View>
 
+          {/* ── NOTIFICATIONS SECTION ── */}
+          <View style={[styles.section, { borderTopWidth: 1, borderTopColor: theme.border }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionEyebrow}>05</Text>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Notifikasi</Text>
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.menuRow,
+                { opacity: pressed ? 0.7 : 1, borderBottomColor: theme.border }
+              ]}
+              onPress={() => router.push('/notifications')}
+            >
+              <View style={styles.menuLeft}>
+                <Ionicons name="notifications-outline" size={18} color={theme.text} />
+                <Text style={[styles.menuText, { color: theme.text }]}>RIWAYAT NOTIFIKASI</Text>
+              </View>
+              <Ionicons name="chevron-forward-outline" size={16} color={theme.textSecondary} />
+            </Pressable>
+          </View>
+
           {/* ── LOGOUT ── */}
           <View style={[styles.section, { borderTopWidth: 1, borderTopColor: theme.border }]}>
             <Pressable
@@ -388,6 +410,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     textAlign: 'right',
+  },
+  menuRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  menuLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  menuText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   logoutBtn: {
     flexDirection: 'row',

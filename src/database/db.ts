@@ -49,6 +49,25 @@ async function initDatabase(database: SQLite.SQLiteDatabase): Promise<void> {
       read_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      manga_id TEXT,
+      chapter_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      is_read INTEGER DEFAULT 0,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS known_mangas (
+      manga_id TEXT PRIMARY KEY,
+      latest_chapter_number INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      cover_url TEXT
+    );
   `);
 }
 
@@ -289,4 +308,156 @@ export async function getReadChapterIds(
     return new Set();
   }
 }
+
+// ====== Notification Operations ======
+
+export interface DbNotification {
+  id: number;
+  user_id: number;
+  title: string;
+  body: string;
+  manga_id: string | null;
+  chapter_id: string | null;
+  created_at: string;
+  is_read: number;
+}
+
+export async function createNotification(
+  userId: number,
+  title: string,
+  body: string,
+  mangaId?: string,
+  chapterId?: string
+): Promise<DbNotification | null> {
+  const database = await getDatabase();
+  try {
+    const result = await database.runAsync(
+      'INSERT INTO notifications (user_id, title, body, manga_id, chapter_id) VALUES (?, ?, ?, ?, ?)',
+      [userId, title, body, mangaId ?? null, chapterId ?? null]
+    );
+    const notification = await database.getFirstAsync<DbNotification>(
+      'SELECT * FROM notifications WHERE id = ?',
+      [result.lastInsertRowId]
+    );
+    return notification ?? null;
+  } catch (error) {
+    console.error('Failed to create notification:', error);
+    return null;
+  }
+}
+
+export async function getNotifications(userId: number): Promise<DbNotification[]> {
+  const database = await getDatabase();
+  try {
+    const notifications = await database.getAllAsync<DbNotification>(
+      'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC',
+      [userId]
+    );
+    return notifications;
+  } catch {
+    return [];
+  }
+}
+
+export async function markNotificationAsRead(userId: number, id: number): Promise<void> {
+  const database = await getDatabase();
+  try {
+    await database.runAsync(
+      'UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?',
+      [id, userId]
+    );
+  } catch (error) {
+    console.error('Failed to mark notification as read:', error);
+  }
+}
+
+export async function markAllNotificationsAsRead(userId: number): Promise<void> {
+  const database = await getDatabase();
+  try {
+    await database.runAsync(
+      'UPDATE notifications SET is_read = 1 WHERE user_id = ?',
+      [userId]
+    );
+  } catch (error) {
+    console.error('Failed to mark all notifications as read:', error);
+  }
+}
+
+export async function deleteNotification(userId: number, id: number): Promise<void> {
+  const database = await getDatabase();
+  try {
+    await database.runAsync(
+      'DELETE FROM notifications WHERE id = ? AND user_id = ?',
+      [id, userId]
+    );
+  } catch (error) {
+    console.error('Failed to delete notification:', error);
+  }
+}
+
+export async function getUnreadNotificationsCount(userId: number): Promise<number> {
+  const database = await getDatabase();
+  try {
+    const result = await database.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0',
+      [userId]
+    );
+    return result?.count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+// ====== Known Mangas Cache Operations ======
+
+export interface DbKnownManga {
+  manga_id: string;
+  latest_chapter_number: number;
+  title: string;
+  cover_url: string | null;
+}
+
+export async function getKnownManga(mangaId: string): Promise<DbKnownManga | null> {
+  const database = await getDatabase();
+  try {
+    const row = await database.getFirstAsync<DbKnownManga>(
+      'SELECT * FROM known_mangas WHERE manga_id = ?',
+      [mangaId]
+    );
+    return row ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveKnownManga(
+  mangaId: string,
+  latestChapterNumber: number,
+  title: string,
+  coverUrl?: string
+): Promise<void> {
+  const database = await getDatabase();
+  try {
+    await database.runAsync(
+      'INSERT OR REPLACE INTO known_mangas (manga_id, latest_chapter_number, title, cover_url) VALUES (?, ?, ?, ?)',
+      [mangaId, latestChapterNumber, title, coverUrl ?? null]
+    );
+  } catch (error) {
+    console.error('Failed to save known manga:', error);
+  }
+}
+
+export async function isKnownMangasEmpty(): Promise<boolean> {
+  const database = await getDatabase();
+  try {
+    const result = await database.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(*) as count FROM known_mangas'
+    );
+    return (result?.count ?? 0) === 0;
+  } catch {
+    return true;
+  }
+}
+
+
 

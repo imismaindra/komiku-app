@@ -269,7 +269,170 @@ export async function getReadChapterIds(
   }
 }
 
+// ====== Notification Operations (Web) ======
+
+export interface DbNotification {
+  id: number;
+  user_id: number;
+  title: string;
+  body: string;
+  manga_id: string | null;
+  chapter_id: string | null;
+  created_at: string;
+  is_read: number;
+}
+
+async function getNotificationsItems(): Promise<DbNotification[]> {
+  const raw = await AsyncStorage.getItem('db_notifications');
+  return raw ? JSON.parse(raw) : [];
+}
+
+async function saveNotificationsItems(items: DbNotification[]): Promise<void> {
+  await AsyncStorage.setItem('db_notifications', JSON.stringify(items));
+}
+
+export async function createNotification(
+  userId: number,
+  title: string,
+  body: string,
+  mangaId?: string,
+  chapterId?: string
+): Promise<DbNotification | null> {
+  try {
+    const items = await getNotificationsItems();
+    const newNotification: DbNotification = {
+      id: Date.now(),
+      user_id: userId,
+      title,
+      body,
+      manga_id: mangaId ?? null,
+      chapter_id: chapterId ?? null,
+      created_at: new Date().toISOString(),
+      is_read: 0,
+    };
+    items.push(newNotification);
+    await saveNotificationsItems(items);
+    return newNotification;
+  } catch (error) {
+    console.error('Failed to create notification on web:', error);
+    return null;
+  }
+}
+
+export async function getNotifications(userId: number): Promise<DbNotification[]> {
+  try {
+    const items = await getNotificationsItems();
+    return items
+      .filter((n) => n.user_id === userId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  } catch {
+    return [];
+  }
+}
+
+export async function markNotificationAsRead(userId: number, id: number): Promise<void> {
+  try {
+    const items = await getNotificationsItems();
+    const updated = items.map((n) =>
+      n.id === id && n.user_id === userId ? { ...n, is_read: 1 } : n
+    );
+    await saveNotificationsItems(updated);
+  } catch (error) {
+    console.error('Failed to mark notification as read on web:', error);
+  }
+}
+
+export async function markAllNotificationsAsRead(userId: number): Promise<void> {
+  try {
+    const items = await getNotificationsItems();
+    const updated = items.map((n) =>
+      n.user_id === userId ? { ...n, is_read: 1 } : n
+    );
+    await saveNotificationsItems(updated);
+  } catch (error) {
+    console.error('Failed to mark all notifications as read on web:', error);
+  }
+}
+
+export async function deleteNotification(userId: number, id: number): Promise<void> {
+  try {
+    const items = await getNotificationsItems();
+    const filtered = items.filter((n) => !(n.id === id && n.user_id === userId));
+    await saveNotificationsItems(filtered);
+  } catch (error) {
+    console.error('Failed to delete notification on web:', error);
+  }
+}
+
+export async function getUnreadNotificationsCount(userId: number): Promise<number> {
+  try {
+    const items = await getNotificationsItems();
+    return items.filter((n) => n.user_id === userId && n.is_read === 0).length;
+  } catch {
+    return 0;
+  }
+}
+
+// ====== Known Mangas Cache Operations (Web) ======
+
+export interface DbKnownManga {
+  manga_id: string;
+  latest_chapter_number: number;
+  title: string;
+  cover_url: string | null;
+}
+
+async function getKnownMangasItems(): Promise<DbKnownManga[]> {
+  const raw = await AsyncStorage.getItem('db_known_mangas');
+  return raw ? JSON.parse(raw) : [];
+}
+
+async function saveKnownMangasItems(items: DbKnownManga[]): Promise<void> {
+  await AsyncStorage.setItem('db_known_mangas', JSON.stringify(items));
+}
+
+export async function getKnownManga(mangaId: string): Promise<DbKnownManga | null> {
+  try {
+    const items = await getKnownMangasItems();
+    return items.find((m) => m.manga_id === mangaId) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveKnownManga(
+  mangaId: string,
+  latestChapterNumber: number,
+  title: string,
+  coverUrl?: string
+): Promise<void> {
+  try {
+    const items = await getKnownMangasItems();
+    const filtered = items.filter((m) => m.manga_id !== mangaId);
+    filtered.push({
+      manga_id: mangaId,
+      latest_chapter_number: latestChapterNumber,
+      title,
+      cover_url: coverUrl ?? null,
+    });
+    await saveKnownMangasItems(filtered);
+  } catch (error) {
+    console.error('Failed to save known manga on web:', error);
+  }
+}
+
+export async function isKnownMangasEmpty(): Promise<boolean> {
+  try {
+    const items = await getKnownMangasItems();
+    return items.length === 0;
+  } catch {
+    return true;
+  }
+}
+
 // Stub - not needed on web
 export async function getDatabase(): Promise<null> {
   return null;
 }
+
+

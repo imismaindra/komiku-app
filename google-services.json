@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "638013760277",
+    "project_id": "komikuapp-fa231",
+    "storage_bucket": "komikuapp-fa231.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:638013760277:android:3e8e24d14b6d99d6137f1c",
+        "android_client_info": {
+          "package_name": "com.shadowkink.komikuapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDCqsNfvi64AjqsvMe1sqa8h_FSNTBXlQE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -10,6 +10,7 @@ LogBox.ignoreLogs([
 ]);
 
 import { AuthProvider } from '@/context/auth-context';
+import { NotificationProvider } from '@/context/notification-context';
  
 function RootStack() {
   const colorScheme = useColorScheme();
@@ -31,6 +32,13 @@ function RootStack() {
             headerShown: false,
           }}
         />
+        <Stack.Screen
+          name="notifications"
+          options={{
+            headerShown: false,
+            presentation: 'modal',
+          }}
+        />
       </Stack>
     </ThemeProvider>
   );
@@ -40,8 +48,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
-        <RootStack />
+        <NotificationProvider>
+          <RootStack />
+        </NotificationProvider>
       </AuthProvider>
     </GestureHandlerRootView>
   );
 }
+

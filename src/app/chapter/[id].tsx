@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
   FlatList,
   Pressable,
@@ -21,35 +22,97 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { ChapterDetail, ChapterPage } from '@/types';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Default aspect ratio for manga pages (portrait) while loading
+const DEFAULT_ASPECT_RATIO = 700 / 1000;
 
 interface MangaPageProps {
   item: ChapterPage;
+  index: number;
   onPress: () => void;
 }
 
-function MangaPage({ item, onPress }: MangaPageProps) {
-  const [aspectRatio, setAspectRatio] = useState(0.7);
+function MangaPage({ item, index, onPress }: MangaPageProps) {
+  const [aspectRatio, setAspectRatio] = useState(DEFAULT_ASPECT_RATIO);
+  const [loadState, setLoadState] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const [retryKey, setRetryKey] = useState(0);
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+
+  // Shimmer animation
+  useEffect(() => {
+    if (loadState !== 'loading') return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(shimmerAnim, { toValue: 0, duration: 900, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [loadState, shimmerAnim]);
+
+  const shimmerOpacity = shimmerAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.7],
+  });
+
+  const placeholderHeight = SCREEN_WIDTH / DEFAULT_ASPECT_RATIO;
 
   return (
     <Pressable style={styles.pageWrapper} onPress={onPress}>
+      {/* Shimmer placeholder shown while loading */}
+      {loadState === 'loading' && (
+        <Animated.View
+          style={[
+            styles.shimmer,
+            { width: SCREEN_WIDTH, height: placeholderHeight, opacity: shimmerOpacity },
+          ]}
+        />
+      )}
+
+      {/* Error state with retry */}
+      {loadState === 'error' && (
+        <View style={[styles.errorPage, { width: SCREEN_WIDTH, height: placeholderHeight }]}>
+          <Ionicons name="image-outline" size={36} color="#3A3A3A" />
+          <Text style={styles.errorPageText}>Gagal memuat halaman {index + 1}</Text>
+          <Pressable
+            style={styles.retryBtn}
+            onPress={() => {
+              setLoadState('loading');
+              setRetryKey(k => k + 1);
+            }}
+          >
+            <Ionicons name="refresh" size={14} color="#fff" />
+            <Text style={styles.retryBtnText}>Coba Lagi</Text>
+          </Pressable>
+        </View>
+      )}
+
       <Image
+        key={retryKey}
         source={{ uri: item.image_url }}
         style={[
           styles.pageImage,
           {
             width: SCREEN_WIDTH,
-            aspectRatio: aspectRatio,
+            aspectRatio,
+            // Hide while loading/error so placeholder shows instead
+            opacity: loadState === 'loaded' ? 1 : 0,
           },
         ]}
         contentFit="contain"
+        // High priority so the image downloads eagerly
+        priority={index < 3 ? 'high' : 'normal'}
+        // expo-image caches on disk by default
+        cachePolicy="disk"
+        recyclingKey={item.image_url}
         onLoad={(e) => {
           const { width, height } = e.source;
-          if (width && height) {
-            setAspectRatio(width / height);
-          }
+          if (width && height) setAspectRatio(width / height);
+          setLoadState('loaded');
         }}
-        transition={200}
+        onError={() => setLoadState('error')}
       />
     </Pressable>
   );
@@ -67,7 +130,7 @@ export default function ChapterReaderScreen() {
   const [error, setError] = useState<string | null>(null);
   const [showUI, setShowUI] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   const flatRef = useRef<FlatList>(null);
 
   // Load Chapter Detail and Log Reading History
@@ -80,10 +143,20 @@ export default function ChapterReaderScreen() {
         if (res.retcode === 0) {
           const data = res.data;
           setChapter(data);
-          
+
+          // Prefetch all page images immediately so they're ready in cache
+          if (data?.pages?.length) {
+            // Fire-and-forget: prefetch in background, don't await
+            data.pages.forEach((page: ChapterPage) => {
+              Image.prefetch(page.image_url, { cachePolicy: 'disk' }).catch(() => {
+                // Silently ignore prefetch failures – the page component has its own retry
+              });
+            });
+          }
+
           // Log Reading history in background
           if (userId && data) {
-            await addReadHistory(userId, data.manga_id, chapterId, data.chapter_number);
+            addReadHistory(userId, data.manga_id, chapterId, data.chapter_number).catch(() => {});
           }
         } else {
           setError('Chapter tidak ditemukan');
@@ -97,24 +170,45 @@ export default function ChapterReaderScreen() {
   }, [chapterId, userId]);
 
   // Keep track of scroll position/page count
-  const onViewableItemsChanged = useMemo(() => ({ viewableItems }: any) => {
-    if (viewableItems && viewableItems.length > 0) {
-      const index = viewableItems[0].index;
-      if (typeof index === 'number') {
-        setCurrentPage(index + 1);
-      }
-    }
-  }, []);
+  const onViewableItemsChanged = useMemo(
+    () =>
+      ({ viewableItems }: any) => {
+        if (viewableItems && viewableItems.length > 0) {
+          const index = viewableItems[0].index;
+          if (typeof index === 'number') {
+            setCurrentPage(index + 1);
+          }
+        }
+      },
+    []
+  );
 
-  const viewabilityConfig = useMemo(() => ({
-    itemVisiblePercentThreshold: 50,
-  }), []);
+  const viewabilityConfig = useMemo(
+    () => ({
+      itemVisiblePercentThreshold: 30,
+    }),
+    []
+  );
+
+  const renderPage = useCallback(
+    ({ item, index }: { item: ChapterPage; index: number }) => (
+      <MangaPage item={item} index={index} onPress={() => setShowUI((v) => !v)} />
+    ),
+    []
+  );
+
+  const keyExtractor = useCallback(
+    (item: ChapterPage) => `page-${item.page_number}`,
+    []
+  );
 
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: '#06060A' }]}>
         <ActivityIndicator size="large" color={theme.accent} />
-        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Mengunduh halaman komik...</Text>
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+          Mengunduh halaman komik...
+        </Text>
       </View>
     );
   }
@@ -124,7 +218,9 @@ export default function ChapterReaderScreen() {
       <View style={[styles.center, { backgroundColor: '#06060A' }]}>
         <Ionicons name="alert-circle-outline" size={54} color={theme.accent} />
         <Text style={[styles.errorTitle, { color: theme.text }]}>Gagal Memuat</Text>
-        <Text style={[styles.errorText, { color: theme.textSecondary }]}>{error ?? 'Chapter tidak ditemukan'}</Text>
+        <Text style={[styles.errorText, { color: theme.textSecondary }]}>
+          {error ?? 'Chapter tidak ditemukan'}
+        </Text>
         <Pressable
           style={[styles.backBtn, { backgroundColor: theme.accent }]}
           onPress={() => {
@@ -142,10 +238,6 @@ export default function ChapterReaderScreen() {
     );
   }
 
-  const renderPage = ({ item }: { item: ChapterPage }) => (
-    <MangaPage item={item} onPress={() => setShowUI(!showUI)} />
-  );
-
   return (
     <View style={styles.root}>
       {/* Main FlatList Reader */}
@@ -153,13 +245,21 @@ export default function ChapterReaderScreen() {
         ref={flatRef}
         data={chapter.pages}
         renderItem={renderPage}
-        keyExtractor={(item) => item.page_number.toString()}
+        keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
-        removeClippedSubviews
-        initialNumToRender={2}
-        maxToRenderPerBatch={3}
-        windowSize={5}
+        // ── Performance tweaks ──────────────────────────────────────────
+        // Do NOT remove clipped subviews: this was causing images to be
+        // unmounted and appear blank when scrolling back up.
+        removeClippedSubviews={false}
+        // Render enough pages ahead so users don't see blank spots
+        initialNumToRender={5}
+        maxToRenderPerBatch={5}
+        updateCellsBatchingPeriod={50}
+        // windowSize controls how many screen-heights of items stay mounted.
+        // 21 = 10 screens above + current + 10 screens below
+        windowSize={21}
+        // ────────────────────────────────────────────────────────────────
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         ListHeaderComponent={
@@ -174,7 +274,9 @@ export default function ChapterReaderScreen() {
           <View style={styles.footer}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
               <Ionicons name="checkmark-circle-outline" size={18} color="#10B981" />
-              <Text style={styles.footerText}>Anda telah selesai membaca Bab {chapter.chapter_number}</Text>
+              <Text style={styles.footerText}>
+                Anda telah selesai membaca Bab {chapter.chapter_number}
+              </Text>
             </View>
             {chapter.next_chapter_id && (
               <Pressable
@@ -219,15 +321,17 @@ export default function ChapterReaderScreen() {
             >
               <Ionicons name="chevron-back" size={18} color="#fff" style={{ marginRight: 2 }} />
             </Pressable>
-            
+
             <View style={styles.hudInfo}>
               <Text style={styles.hudChapterTitle} numberOfLines={1}>
                 Chapter {chapter.chapter_number}
                 {chapter.title ? ` - ${chapter.title}` : ''}
               </Text>
-              <Text style={styles.hudPageCount}>{currentPage} / {chapter.pages.length} Halaman</Text>
+              <Text style={styles.hudPageCount}>
+                {currentPage} / {chapter.pages.length} Halaman
+              </Text>
             </View>
- 
+
             {chapter.next_chapter_id ? (
               <Pressable
                 style={[styles.hudBtn, { backgroundColor: theme.accent }]}
@@ -276,9 +380,6 @@ const styles = StyleSheet.create({
   loadingText: {
     fontWeight: '600',
   },
-  errorEmoji: {
-    fontSize: 54,
-  },
   errorTitle: {
     fontSize: 22,
     fontWeight: '800',
@@ -299,6 +400,51 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '800',
   },
+
+  // Page wrapper
+  pageWrapper: {
+    alignItems: 'center',
+  },
+  pageImage: {
+    backgroundColor: '#000',
+  },
+
+  // Shimmer placeholder
+  shimmer: {
+    position: 'absolute',
+    backgroundColor: '#1C1C1E',
+    borderRadius: 4,
+  },
+
+  // Error page state
+  errorPage: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0D0D0D',
+    gap: 8,
+  },
+  errorPageText: {
+    color: '#4A4A4A',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#2A2A2A',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    marginTop: 4,
+  },
+  retryBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // Chapter header/footer
   chapterHeader: {
     padding: Spacing.three,
     alignItems: 'center',
@@ -308,12 +454,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     letterSpacing: 0.5,
-  },
-  pageWrapper: {
-    alignItems: 'center',
-  },
-  pageImage: {
-    backgroundColor: '#000',
   },
   footer: {
     padding: Spacing.five,
@@ -365,6 +505,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+
+  // HUD
   hudContainer: {
     position: 'absolute',
     top: 0,
@@ -394,11 +536,6 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: 'rgba(255,255,255,0.1)',
   },
-  hudBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '800',
-  },
   hudInfo: {
     alignItems: 'center',
     flex: 1,
@@ -423,7 +560,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     gap: 12,
   },
-
   progressBarBg: {
     height: 4,
     width: '100%',
